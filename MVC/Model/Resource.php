@@ -39,21 +39,20 @@ class Resource implements \SubjectInterface
     use \SubjectTrait;
 
     /**
-     * @var string $id          Identifier of this resource
+     * @var string $name        Name of this resource
      * @var string $description Description of this resource
      */
-    public $id, $description;
+    public $name, $description;
 
 
     /**
      * Constructor.
-     * @param string $id Identifier of the resource
+     * @param string $name        Name of the resource
      * @param string $description Description of the resource
      */
-    public function __construct($id, $description = null)
+    public function __construct($name, $description = null)
     {
-        $this->id          = $id;
+        $this->name        = $name;
         $this->description = $description;
-        $this->roles       = [];
     }
 }

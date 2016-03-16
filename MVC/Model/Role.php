@@ -69,10 +69,10 @@ class Role implements \SubjectInterface
      */
     public function canRead(Resource $resource)
     {
-        $res = $this->resources;
-        $id  = $resource->id;
+        $res  = $this->resources;
+        $name = $resource->name;
 
-        return isset($res[$id]) && (strpos($res[$id], 'r') !== false);
+        return isset($res[$name]) && (strpos($res[$name], 'r') !== false);
     }
 
 
@@ -85,10 +85,10 @@ class Role implements \SubjectInterface
      */
     public function canWrite(Resource $resource)
     {
-        $res = $this->resources;
-        $id  = $resource->id;
+        $res  = $this->resources;
+        $name = $resource->name;
 
-        return isset($res[$id]) && (strpos($res[$id], 'w') !== false);
+        return isset($res[$name]) && (strpos($res[$name], 'w') !== false);
     }
 
 
@@ -106,7 +106,7 @@ class Role implements \SubjectInterface
         $readable  = (strpos($mode, 'r') !== false) ? 'r' : '';
         $writeable = (strpos($mode, 'w') !== false) ? 'w' : '';
 
-        $this->resources[$resource->id] = $readable . $writeable;
+        $this->resources[$resource->name] = $readable . $writeable;
 
         return $this;
     }
@@ -121,7 +121,7 @@ class Role implements \SubjectInterface
      */
     public function removeResource(Resource $resource)
     {
-        unset($this->resources[$resource->id]);
+        unset($this->resources[$resource->name]);
 
         return $this;
     }

@@ -59,11 +59,11 @@ class ResourceMapper
      */
     public function create(Resource $resource)
     {
-        $query = 'INSERT INTO resource (identifier, description) '
-               . 'VALUES (:id, :description)';
+        $query = 'INSERT INTO resource (name, description) '
+               . 'VALUES (:name, :description)';
         $stm   = $this->dbh->prepare($query);
         $stm->execute([
-            ':id' => $resource->id,
+            ':name'        => $resource->name,
             ':description' => $resource->description
         ]);
 
@@ -74,17 +74,17 @@ class ResourceMapper
 
     /**
      * Reads a resource.
-     * @param string $id Identifier of the resource
+     * @param string $name Name of the resource
      * @return Resource Resource from the database
      */
-    public function read($id)
+    public function read($name)
     {
-        $query = 'SELECT * FROM resource WHERE identifier = :id';
+        $query = 'SELECT * FROM resource WHERE name = :name';
         $stm   = $this->dbh->prepare($query);
-        $stm->execute([':id' => $id]);
+        $stm->execute([':name' => $name]);
 
         $record = $stm->fetch();
-        return new Resource($record['identifier'], $record['description']);
+        return new Resource($record['name'], $record['description']);
     }
 
 
@@ -97,10 +97,10 @@ class ResourceMapper
     public function update(Resource $resource)
     {
         $query = 'UPDATE resource '
-               . 'SET description = :description WHERE identifier = :id';
+               . 'SET description = :description WHERE name = :name';
         $stm   = $this->dbh->prepare($query);
         $stm->execute([
-            ':id'          => $resource->id,
+            ':name'        => $resource->name,
             ':description' => $resource->description
         ]);
 
@@ -116,11 +116,11 @@ class ResourceMapper
      */
     public function delete(Resource $resource)
     {
-        $query = 'DELETE FROM resource WHERE identifier = :id';
+        $query = 'DELETE FROM resource WHERE name = :name';
         $stm   = $this->dbh->prepare($query);
-        $stm->execute([':id' => $resource->id]);
+        $stm->execute([':name' => $resource->name]);
 
-        return $this;
+        return $this->deletePermissions($resource);
     }
 
 
@@ -134,7 +134,7 @@ class ResourceMapper
     {
         $query = 'DELETE FROM permission WHERE resource = :name';
         $stm   = $this->dbh->prepare($query);
-        $stm->execute([':name' => $resource->id]);
+        $stm->execute([':name' => $resource->name]);
 
         return $this;
     }
