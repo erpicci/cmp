@@ -63,9 +63,9 @@ class JoinClause implements WhereClauseInterface
      * Sets criteria for this clause.
      * Clauses are an associative array where keys are field name and
      * values will be tested for equality.
-     * For example, ['username' => 'my_user', 'password' => 'my_password']
-     * will match every record where `username` is equal to 'my_user'
-     * and/or `password` is equal to 'my_password'.
+     * For example, `['username' => 'my_user', 'password' => 'my_password']`
+     * will match every record where 'username' is equal to 'my_user'
+     * and/or 'password' is equal to 'my_password'.
      * @param array $caluses Associative array of clauses
      * @return self This clause itself
      */
