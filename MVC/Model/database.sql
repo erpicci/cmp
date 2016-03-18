@@ -77,6 +77,20 @@ CREATE TABLE IF NOT EXISTS message (
 );
 
 
+-- Event
+CREATE TABLE IF NOT EXISTS event (
+    id        INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    title     VARCHAR(128),
+    content   MEDIUMTEXT,
+    time      INT UNSIGNED NOT NULL,
+    place     VARCHAR(256) NOT NULL,
+    image     VARCHAR(256),
+    timestamp INT UNSIGNED NOT NULL,
+    visible   INT UNSIGNED NOT NULL DEFAULT 0,
+    CONSTRAINT id PRIMARY KEY(id)
+);
+
+
 -- Music score
 CREATE TABLE IF NOT EXISTS musicscore (
     id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
