@@ -23,7 +23,7 @@
  */
 namespace MVC\Model;
 
-require_once 'Database.php';
+require_once __DIR__ . '/../../Database/JoinClause.php';
 
 /**
  * Data mapper for a musicscore.
@@ -36,18 +36,19 @@ require_once 'Database.php';
 class MusicscoreMapper
 {
     /**
-     * @var object $dbh Database connection
+     * @var \Database\DatabaseInterface $db A database
      */
-    private $dbh;
+    private $db;
 
 
     /**
      * Constructor.
      * Connects to the database.
+     * @param \Database\DatabaseInterface $db Database to connect to
      */
-    public function __construct()
+    public function __construct(\Database\DatabaseInterface $db)
     {
-        $this->dbh = \MVC\Database\connect();
+        $this->db = $db;
     }
 
 
@@ -59,17 +60,13 @@ class MusicscoreMapper
      */
     public function create(Musicscore $musicscore)
     {
-        $query = 'INSERT INTO musicscore (id, file, name, description, timestamp) '
-               . 'VALUES (:id, :file, :name, :description, :timestamp)';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([
-            ':id'          => $musicscore->id,
-            ':file'        => $musicscore->content,
-            ':name'        => $musicscore->name,
-            ':description' => $musicscore->description,
-            ':timestamp'   => $musicscore->timestamp
+        $this->db->insert('musicscore', [
+            'file'        => $musicscore->content,
+            'name'        => $musicscore->name,
+            'description' => $musicscore->description,
+            'timestamp'   => $musicscore->timestamp
         ]);
-        $musicscore->id = $this->dbh->lastInsertId();
+        $musicscore->id = $this->db->lastInsertId();
 
         return $this;
     }
@@ -83,11 +80,12 @@ class MusicscoreMapper
      */
     public function read($id)
     {
-        $query = 'SELECT * FROM musicscore WHERE id = :id';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([':id' => $id]);
+        $where = new \Database\JoinClause();
+        $where->setClauses(['id' => $id]);
 
-        $record = $stm->fetch();
+        $record = $this->db->select('musicscore', [], $where);
+        $record = $record[0];
+
         return new Musicscore(
             $record['id'],
             $record['file'],
@@ -106,16 +104,15 @@ class MusicscoreMapper
      */
     public function update(Musicscore $musicscore)
     {
-        $query = 'UPDATE musicscore '
-               . 'SET file = :file, name = :name, description = :description, timestamp = :timestamp WHERE id = :id';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([
-            ':id'          => $musicscore->id,
-            ':file'        => $musicscore->content,
-            ':name'        => $musicscore->name,
-            ':description' => $musicscore->description,
-            ':timestamp'   => $musicscore->timestamp
-        ]);
+        $where = new \Database\JoinClause();
+        $where->setClauses(['id' => $musicscore->id]);
+
+        $this->db->update('musicscore', [
+            'file'        => $musicscore->content,
+            'name'        => $musicscore->name,
+            'description' => $musicscore->description,
+            'timestamp'   => $musicscore->timestamp
+        ], $where);
 
         return $this;
     }
@@ -129,9 +126,9 @@ class MusicscoreMapper
      */
     public function delete(Musicscore $musicscore)
     {
-        $query = 'DELETE FROM musicscore WHERE id = :id';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([':id' => $musicscore->id]);
+        $where = new \Database\JoinClause();
+        $where->setClauses(['id' => $musicscore->id]);
+        $this->db->delete('musicscore', $where);
 
         return $this;
     }

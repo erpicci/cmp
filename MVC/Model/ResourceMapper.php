@@ -23,7 +23,8 @@
  */
 namespace MVC\Model;
 
-require_once 'Database.php';
+require_once __DIR__ . '/../../Database/JoinClause.php';
+
 
 /**
  * Data mapper for a resource.
@@ -36,18 +37,19 @@ require_once 'Database.php';
 class ResourceMapper
 {
     /**
-     * @var object $dbh Database connection
+     * @var \Database\DatabaseInterface $db A database
      */
-    private $dbh;
+    private $db;
 
 
     /**
      * Constructor.
      * Connects to the database.
+     * @param \Database\DatabaseInterface $db Database to connect to
      */
-    public function __construct()
+    public function __construct(\Database\DatabaseInterface $db)
     {
-        $this->dbh = \MVC\Database\connect();
+        $this->db = $db;
     }
 
 
@@ -59,12 +61,9 @@ class ResourceMapper
      */
     public function create(Resource $resource)
     {
-        $query = 'INSERT INTO resource (name, description) '
-               . 'VALUES (:name, :description)';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([
-            ':name'        => $resource->name,
-            ':description' => $resource->description
+        $this->db->insert('resource', [
+            'name'        => $resource->name,
+            'description' => $resource->description
         ]);
 
         return $this;
@@ -79,11 +78,12 @@ class ResourceMapper
      */
     public function read($name)
     {
-        $query = 'SELECT * FROM resource WHERE name = :name';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([':name' => $name]);
+        $where = new \Database\JoinClause();
+        $where->setClauses(['name' => $name]);
 
-        $record = $stm->fetch();
+        $record = $this->db->select('resource', [], $where);
+        $record = $record[0];
+
         return new Resource($record['name'], $record['description']);
     }
 
@@ -96,13 +96,12 @@ class ResourceMapper
      */
     public function update(Resource $resource)
     {
-        $query = 'UPDATE resource '
-               . 'SET description = :description WHERE name = :name';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([
-            ':name'        => $resource->name,
-            ':description' => $resource->description
-        ]);
+        $where = new \Database\JoinClause();
+        $where->setClauses(['name' => $resource->name]);
+
+        $this->db->update('resource', [
+            'description' => $resource->description
+        ], $where);
 
         return $this;
     }
@@ -116,9 +115,9 @@ class ResourceMapper
      */
     public function delete(Resource $resource)
     {
-        $query = 'DELETE FROM resource WHERE name = :name';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([':name' => $resource->name]);
+        $where = new \Database\JoinClause();
+        $where->setClauses(['name' => $resource->name]);
+        $this->db->delete('resource', $where);
 
         return $this->deletePermissions($resource);
     }
@@ -132,9 +131,9 @@ class ResourceMapper
      */
     private function deletePermissions(Resource $resource)
     {
-        $query = 'DELETE FROM permission WHERE resource = :name';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([':name' => $resource->name]);
+        $where = new \Database\JoinClause();
+        $where->setClauses(['resource' => $resource->name]);
+        $this->db->delete('permission', $where);
 
         return $this;
     }

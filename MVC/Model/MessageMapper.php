@@ -23,7 +23,9 @@
  */
 namespace MVC\Model;
 
-require_once 'Database.php';
+require_once __DIR__ . '/../../Database/JoinClause.php';
+
+use \Database\JoinClause as WhereClause;
 
 /**
  * Data mapper for a message.
@@ -36,18 +38,19 @@ require_once 'Database.php';
 class MessageMapper
 {
     /**
-     * @var object $dbh Database connection
+     * @var \Database\DatabaseInterface $db A database
      */
-    private $dbh;
+    private $db;
 
 
     /**
      * Constructor.
      * Connects to the database.
+     * @param \Database\DatabaseInterface $db Database to connect to
      */
-    public function __construct()
+    public function __construct(\Database\DatabaseInterface $db)
     {
-        $this->dbh = \MVC\Database\connect();
+        $this->db = $db;
     }
 
 
@@ -59,16 +62,13 @@ class MessageMapper
      */
     public function create(Message $message)
     {
-        $query = 'INSERT INTO message (title, content, image, timestamp) '
-               . 'VALUES (:title, :content, :image, :timestamp)';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([
-            ':title'     => $message->title,
-            ':content'   => $message->content,
-            ':image'     => $message->image,
-            ':timestamp' => $message->timestamp
+        $this->db->insert('message', [
+            'title'     => $message->title,
+            'content'   => $message->content,
+            'image'     => $message->image,
+            'timestamp' => $message->timestamp
         ]);
-        $message->id = $this->dbh->lastInsertId();
+        $message->id = $this->db->lastInsertId();
 
         return $this;
     }
@@ -82,11 +82,12 @@ class MessageMapper
      */
     public function read($id)
     {
-        $query = 'SELECT * FROM message WHERE id = :id';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([':id' => $id]);
+        $where = new WhereClause();
+        $where->setClauses(['id' => $id]);
 
-        $record = $stm->fetch();
+        $record = $this->db->select('message', [], $where);
+        $record = $record[0];
+
         return new Message(
             $record['id'],
             $record['title'],
@@ -105,17 +106,15 @@ class MessageMapper
      */
     public function update(Message $message)
     {
-        $query = 'UPDATE message '
-               . 'SET title = :title, content = :content, '
-               . 'image = :image, timestamp = :timestamp WHERE id = :id';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([
-            ':id'        => $message->id,
-            ':title'     => $message->title,
-            ':content'   => $message->content,
-            ':image'     => $message->image,
-            ':timestamp' => $message->timestamp
-        ]);
+        $where = new WhereClause();
+        $where->setClauses(['id' => $message->id]);
+
+        $this->db->update('message', [
+            'title'     => $message->title,
+            'content'   => $message->content,
+            'image'     => $message->image,
+            'timestamp' => $message->timestamp
+        ], $where);
 
         return $this;
     }
@@ -129,9 +128,9 @@ class MessageMapper
      */
     public function delete(Message $message)
     {
-        $query = 'DELETE FROM message WHERE id = :id';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([':id' => $message->id]);
+        $where = new WhereClause();
+        $where->setClauses(['id' => $message->id]);
+        $this->db->delete('message', $where);
 
         return $this;
     }

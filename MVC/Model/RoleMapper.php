@@ -23,7 +23,7 @@
  */
 namespace MVC\Model;
 
-require_once 'Database.php';
+require_once __DIR__ . '/../../Database/JoinClause.php';
 
 /**
  * Data mapper for a role.
@@ -36,18 +36,19 @@ require_once 'Database.php';
 class RoleMapper
 {
     /**
-     * @var object $dbh Database connection
+     * @var \Database\DatabaseInterface $db A database
      */
-    private $dbh;
+    private $db;
 
 
     /**
      * Constructor.
      * Connects to the database.
+     * @param \Database\DatabaseInterface $db Database to connect to
      */
-    public function __construct()
+    public function __construct(\Database\DatabaseInterface $db)
     {
-        $this->dbh = \MVC\Database\connect();
+        $this->db = $db;
     }
 
 
@@ -59,12 +60,9 @@ class RoleMapper
      */
     public function create(Role $role)
     {
-        $query = 'INSERT INTO role (name, description) '
-               . 'VALUES (:name, :description)';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([
-            ':name'        => $role->name,
-            ':description' => $role->description
+        $this->db->insert('role', [
+            'name'        => $role->name,
+            'description' => $role->description
         ]);
 
         return $this->deletePermissions($role)->createPermissions($role);
@@ -79,13 +77,13 @@ class RoleMapper
      */
     public function read($name)
     {
-        $query = 'SELECT * FROM role WHERE name = :name';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([':name' => $name]);
+        $where = new \Database\JoinClause();
+        $where->setClauses(['name' => $name]);
 
-        $record = $stm->fetch();
+        $record = $this->db->select('role', [], $where);
+        $record = $record[0];
+
         $role = new Role($record['name'], $record['description']);
-
         $this->readPermissions($role);
 
         return $role;
@@ -100,13 +98,13 @@ class RoleMapper
      */
     public function update(Role $role)
     {
-        $query = 'UPDATE role '
-               . 'SET description = :description WHERE name = :name';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([
-            ':name'        => $role->name,
-            ':description' => $role->description
-        ]);
+        $where = new \Database\JoinClause();
+        $where->setClauses(['name' => $role->name]);
+
+        $this->db->update('role', [
+            'name' => $role->name,
+            'description' => $role->description
+        ], $where);
 
         return $this->deletePermissions($role)->createPermissions($role);
     }
@@ -120,9 +118,9 @@ class RoleMapper
      */
     public function delete(Role $role)
     {
-        $query = 'DELETE FROM role WHERE name = :name';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([':name' => $role->name]);
+        $where = new \Database\JoinClause();
+        $where->setClauses(['name' => $role->name]);
+        $this->db->delete('role', $where);
 
         return $this->deleteRoleAssociations($role)->deletePermissions($role);
     }
@@ -136,15 +134,11 @@ class RoleMapper
      */
     private function createPermissions(Role $role)
     {
-        $query = 'INSERT INTO permission (role, resource, mode) '
-               . 'VALUES (:role, :resource, :mode)';
-        $stm   = $this->dbh->prepare($query);
-
-        foreach ($role->resources as $id => $mode) {
-            $stm->execute([
-                ':role'     => $role->name,
-                ':resource' => $id,
-                ':mode'     => $mode
+        foreach ($role->resources as $name => $mode) {
+            $this->db->insert('permission', [
+                'role'     => $role->name,
+                'resource' => $id,
+                'mode'     => $mode
             ]);
         }
 
@@ -160,12 +154,12 @@ class RoleMapper
      */
     private function readPermissions(Role $role)
     {
-        $query = 'SELECT resource, mode FROM permission WHERE role = :role';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([':role' => $role->name]);
+        $where = new \Database\JoinClause();
+        $where->setClauses(['role' => $role->name]);
 
-        while ($row = $stm->fetch()) {
-            $role->resources[$row['resource']] = $row['mode'];
+        $records = $this->db->select('permission', [], $where);
+        foreach ($records as $record) {
+            $role->resources[$record['resource']] = $record['mode'];
         }
 
         return $this;
@@ -180,9 +174,9 @@ class RoleMapper
      */
     private function deleteRoleAssociations(Role $role)
     {
-        $query = 'DELETE FROM role_association WHERE role = :name';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([':name' => $role->name]);
+        $where = new \Database\JoinClause();
+        $where->setClauses(['role' => $role->name]);
+        $this->db->delete('role_association', $where);
 
         return $this;
     }
@@ -196,9 +190,9 @@ class RoleMapper
      */
     private function deletePermissions(Role $role)
     {
-        $query = 'DELETE FROM permission WHERE role = :name';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([':name' => $role->name]);
+        $where = new \Database\JoinClause();
+        $where->setClauses(['role' => $role->name]);
+        $this->db->delete('permission', $where);
 
         return $this;
     }

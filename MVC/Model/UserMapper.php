@@ -23,7 +23,7 @@
  */
 namespace MVC\Model;
 
-require_once 'Database.php';
+require_once __DIR__ . '/../../Database/JoinClause.php';
 
 /**
  * Data mapper for an user of the system.
@@ -36,18 +36,19 @@ require_once 'Database.php';
 class UserMapper
 {
     /**
-     * @var object $dbh Database connection
+     * @var \Database\DatabaseInterface $db A database
      */
-    private $dbh;
+    private $db;
 
 
     /**
      * Constructor.
      * Connects to the database.
+     * @param \Database\DatabaseInterface $db Database to connect to
      */
-    public function __construct()
+    public function __construct(\Database\DatabaseInterface $db)
     {
-        $this->dbh = \MVC\Database\connect();
+        $this->db = $db;
     }
 
 
@@ -59,15 +60,12 @@ class UserMapper
      */
     public function create(User $user)
     {
-        $query = 'INSERT INTO user (username, password, last_login, failed_logins, last_attempt)'
-               . 'VALUES (:username, :password, :login, :fail, :attempt)';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([
-            ':username' => $user->username,
-            ':password' => $user->password,
-            ':login'    => $user->last_login,
-            ':fail'     => $user->failed_logins,
-            ':attempt'  => $user->last_attempt
+        $this->db->insert('user', [
+            'username'      => $user->username,
+            'password'      => $user->password,
+            'last_login'    => $user->last_login,
+            'failed_logins' => $user->failed_logins,
+            'last_attempt'  => $user->last_attempt
         ]);
 
         return $this->createRoles($user);
@@ -82,14 +80,11 @@ class UserMapper
      */
     public function read($username)
     {
-        $query = 'SELECT * FROM user WHERE username = :username';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([':username' => $username]);
+        $where = new \Database\JoinClause();
+        $where->setClauses(['username' => $username]);
 
-        $record = $stm->fetch();
-        if ($record === false) {
-            return null;
-        }
+        $record = $this->db->select('user', [], $where);
+        $record = $record[0];
 
         $user = new User(
             $record['username'],
@@ -112,17 +107,15 @@ class UserMapper
      */
     public function update(User $user)
     {
-        $query = 'UPDATE user SET password = :password, last_login = :last_login, '
-               . 'failed_logins = :failed_logins, last_attempt = :last_attempt '
-               . 'WHERE username = :username';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([
-            ':username'      => $user->username,
-            ':password'      => $user->password,
-            ':last_login'    => $user->last_login,
-            ':failed_logins' => $user->failed_logins,
-            ':last_attempt'  => $user->last_attempt
-        ]);
+        $where = new \Database\JoinClause();
+        $where->setClauses(['username' => $user->username]);
+
+        $this->db->update('user', [
+            'password'      => $user->password,
+            'last_login'    => $user->last_login,
+            'failed_logins' => $user->failed_logins,
+            'last_attempt'  => $user->last_attempt
+        ], $where);
 
         return $this->deleteRoles($user)->createRoles($user);
     }
@@ -136,9 +129,9 @@ class UserMapper
      */
     public function delete(User $user)
     {
-        $query = 'DELETE FROM user WHERE username = :username';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([':username' => $user->username]);
+        $where = new \Database\JoinClause();
+        $where->setClauses(['username' => $user->username]);
+        $this->db->delete('user', $where);
 
         return $this->deleteRoles($user);
     }
@@ -152,12 +145,11 @@ class UserMapper
      */
     private function createRoles(User $user)
     {
-        $query = 'INSERT INTO role_association (user, role) '
-               . 'VALUES (:user, :role)';
-        $stm   = $this->dbh->prepare($query);
-
         foreach ($user->roles as $name => $value) {
-            $stm->execute([':user' => $user->username, ':role' => $name]);
+            $this->db->insert('role_association', [
+                'user' => $user->username,
+                'role' => $name
+            ]);
         }
 
         return $this;
@@ -172,11 +164,11 @@ class UserMapper
      */
     public function readRoles(User $user)
     {
-        $query = 'SELECT role FROM role_association WHERE user = :user';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([':user' => $user->username]);
+        $where = new \Database\JoinClause();
+        $where->setClauses(['user' => $user->username]);
 
-        while ($row = $stm->fetch()) {
+        $records = $this->db->select('role_association', [], $where);
+        foreach ($records as $record) {
             $user->roles[$row['role']] = true;
         }
 
@@ -192,9 +184,9 @@ class UserMapper
      */
     public function deleteRoles(User $user)
     {
-        $query = 'DELETE FROM role_association WHERE user = :user';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([':user' => $user->username]);
+        $where = new \Database\JoinClause();
+        $where->setClauses(['user' => $user->username]);
+        $this->db->delete('role_association', $where);
 
         return $this;
     }

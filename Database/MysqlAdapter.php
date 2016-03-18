@@ -217,6 +217,11 @@ class MysqlAdapter implements DatabaseInterface
         }
         $parameters = array_merge($parameters, $where->toParameters());
 
+        // Returns if no update will take place
+        if (empty($sets)) {
+            return $this;
+        }
+
         $query = 'UPDATE ' . $entity
                . ' SET ' . implode(', ', $sets);
         if (!empty($where->toSql())) {

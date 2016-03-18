@@ -23,7 +23,7 @@
  */
 namespace MVC\Model;
 
-require_once 'Database.php';
+require_once __DIR__ . '/../../Database/JoinClause.php';
 
 /**
  * Data mapper for a sponsor.
@@ -36,7 +36,7 @@ require_once 'Database.php';
 class SponsorMapper
 {
     /**
-     * @var object $dbh Database connection
+     * @var \Database\DatabaseInterface $db A database
      */
     private $dbh;
 
@@ -44,10 +44,11 @@ class SponsorMapper
     /**
      * Constructor.
      * Connects to the database.
+     * @param \Database\DatabaseInterface $db Database to connect to
      */
-    public function __construct()
+    public function __construct(\Database\DatabaseInterface $db)
     {
-        $this->dbh = \MVC\Database\connect();
+        $this->db = $db;
     }
 
 
@@ -59,15 +60,12 @@ class SponsorMapper
      */
     public function create(Sponsor $sponsor)
     {
-        $query = 'INSERT INTO sponsor (name, URL, banner) '
-               . 'VALUES (:name, :url, :banner)';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([
-            ':name'   => $sponsor->name,
-            ':url'    => $sponsor->website,
-            ':banner' => $sponsor->banner
+        $this->db->insert('sponsor', [
+            'name'   => $sponsor->name,
+            'url'    => $sponsor->website,
+            'banner' => $sponsor->banner
         ]);
-        $sponsor->id = $this->dbh->lastInsertId();
+        $sponsor->id = $this->db->lastInsertId();
 
         return $this;
     }
@@ -81,13 +79,14 @@ class SponsorMapper
      */
     public function read($id)
     {
-        $query = 'SELECT * FROM sponsor WHERE id = :id';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([':id' => $id]);
+        $where = new \Database\JoinClause();
+        $where->setClauses(['id' => $id]);
 
-        $record = $stm->fetch();
+        $record = $this->db->select('sponsor', [], $where);
+        $record = $record[0];
+
         return new Sponsor(
-            $id,
+            $record['id'],
             $record['name'],
             $record['URL'],
             $record['banner']
@@ -103,16 +102,14 @@ class SponsorMapper
      */
     public function update(Sponsor $sponsor)
     {
-        $query = 'UPDATE sponsor '
-               . 'SET name = :name, URL = :website, banner = :banner '
-               . 'WHERE id = :id';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([
-            ':id' => $sponsor->id,
-            ':name' => $sponsor->name,
-            ':website' => $sponsor->website,
-            ':banner'  => $sponsor->banner
-        ]);
+        $where = new \Database\JoinClause();
+        $where->setClauses(['id' => $sponsor->id]);
+
+        $this->db->update('sponsor', [
+            'name'   => $sponsor->name,
+            'URL'    => $sponsor->website,
+            'banner' => $sponsor->banner
+        ], $where);
 
         return $this;
     }
@@ -126,39 +123,10 @@ class SponsorMapper
      */
     public function delete(Sponsor $sponsor)
     {
-        $query = 'DELETE FROM sponsor WHERE id = :id';
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute([':id' => $sponsor->id]);
+        $where = new \Database\JoinClause();
+        $where->setClauses(['id' => $sponsor->id]);
+        $this->db->delete('sponsor', $where);
 
         return $this;
-    }
-
-
-
-    /**
-     * Searches sponsors.
-     * @param array $match Matching clauses
-     * @param int   $page  Page number (optional)
-     * @param int   $size  Size of a page (optional)
-     * @return array Sponsors matching clauses
-     */
-    public function search($match, $page = 1, $size = 10)
-    {
-        $offset = ($page - 1) * $size;
-        $query = 'SELECT * FROM sponsor LIMIT ' . $size . ' OFFSET ' . $offset;
-
-        $stm   = $this->dbh->prepare($query);
-        $stm->execute();
-
-        $sponsors = [];
-        while ($row = $stm->fetch()) {
-            $sponsors[] = new Sponsor(
-                $row['id'],
-                $row['name'],
-                $row['URL'],
-                $row['banner']
-            );
-        }
-        return $sponsors;
     }
 }
