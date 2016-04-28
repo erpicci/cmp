@@ -23,6 +23,7 @@
  */
 namespace MVC\Model;
 
+require_once 'Message.php';
 require_once __DIR__ . '/../../Database/JoinClause.php';
 
 use \Database\JoinClause as WhereClause;

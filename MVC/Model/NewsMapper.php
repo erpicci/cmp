@@ -23,6 +23,9 @@
  */
 namespace MVC\Model;
 
+require_once 'MessageMapper.php';
+require_once 'EventMapper.php';
+
 /**
  * Data mapper for news.
  *
