@@ -56,9 +56,10 @@ class NewsHtml implements \ObserverInterface
 
     /**
      * Renders the model.
+     * @param int|null $index Index of this entry in a list, or null
      * @return self This view itself
      */
-    public function output()
+    public function output($index = null)
     {
         $entry = $this->entry;
         echo
@@ -73,11 +74,28 @@ HTML;
 
         // Prints image, if any
         if (!empty($entry->image)) {
+            $height = "";
+
+            if (!is_null($index)) {
+                $height .= "&w=";
+                switch ($index) {
+                case 0:
+                    $height .= "512";
+                    break;
+                case 1: case 2:
+                    $height .= "256";
+                    break;
+                default:
+                    $height .= "128";
+                }
+            }
+
             echo
 <<<HTML
 <div class="pull-right"
-style="max-height: 15em; max-width: 30%; margin: .5em; overflow: hidden">
-  <img src="thumbnail.php/$entry->image&w=640"
+
+style="margin: .5em; overflow: hidden">
+  <img src="thumbnail/$entry->image$height" data-zoom="$entry->image"
     alt="$entry->title"
     class="img-responsive img-zoomable" />
 </div>
